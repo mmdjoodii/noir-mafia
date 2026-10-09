@@ -1,15 +1,17 @@
 import type { Role, Scenario } from '../domain/types'
 
+const img = (name: string) => `${import.meta.env.BASE_URL}cards/${name}.webp`
+
 export const damageRoles: Role[] = [
-  { id: 'simple-citizen', name: 'شهروند ساده', side: 'citizen', cardImage: '/cards/simple-citizen.webp' },
-  { id: 'mafia-boss', name: 'رئیس مافیا', side: 'mafia', cardImage: '/cards/mafia-boss.webp' },
-  { id: 'poisoner', name: 'سم‌ساز', side: 'mafia', cardImage: '/cards/poisoner.webp' },
-  { id: 'chaos-maker', name: 'آشوب‌گر', side: 'mafia', cardImage: '/cards/chaos-maker.webp' },
-  { id: 'doctor', name: 'طبیب', side: 'citizen', cardImage: '/cards/doctor.webp' },
-  { id: 'sage', name: 'حکیم', side: 'citizen', cardImage: '/cards/sage.webp' },
-  { id: 'archer', name: 'کمان‌دار', side: 'citizen', cardImage: '/cards/archer.webp' },
-  { id: 'wizard', name: 'جادوگر', side: 'citizen', cardImage: '/cards/wizard.webp' },
-  { id: 'roulette-man', name: 'رولت من', side: 'citizen', cardImage: '/cards/roulette-man.webp' },
+  { id: 'simple-citizen', name: 'شهروند ساده', side: 'citizen', cardImage: img('simple-citizen') },
+  { id: 'mafia-boss', name: 'رئیس مافیا', side: 'mafia', cardImage: img('mafia-boss') },
+  { id: 'poisoner', name: 'سم‌ساز', side: 'mafia', cardImage: img('poisoner') },
+  { id: 'chaos-maker', name: 'آشوب‌گر', side: 'mafia', cardImage: img('chaos-maker') },
+  { id: 'doctor', name: 'طبیب', side: 'citizen', cardImage: img('doctor') },
+  { id: 'sage', name: 'حکیم', side: 'citizen', cardImage: img('sage') },
+  { id: 'archer', name: 'کمان‌دار', side: 'citizen', cardImage: img('archer') },
+  { id: 'wizard', name: 'جادوگر', side: 'citizen', cardImage: img('wizard') },
+  { id: 'roulette-man', name: 'رولت من', side: 'citizen', cardImage: img('roulette-man') },
 ]
 
 export const damageScenario: Scenario = {
