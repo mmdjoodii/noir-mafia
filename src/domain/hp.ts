@@ -3,20 +3,32 @@ import { makeId } from './id'
 
 const isDayPhase = (p: Phase) => p.kind === 'day' || p.kind === 'intro-day'
 
-/** HP می‌تواند منفی شود؛ مقدار واقعی ثبت می‌شود. HP ≤ ۰ یعنی مرگ. */
+/**
+ * وضعیت بعد از تغییر HP:
+ *  HP > ۰ → زنده | روز و دقیقاً ۰ → کما | بقیه (منفی در روز، ≤۰ در شب) → مرگ
+ */
+function statusAfter(current: Assignment, after: number, phase: Phase): Pick<Assignment, 'status' | 'death'> {
+  if (after > 0) return { status: 'alive' }
+  if (after === 0 && isDayPhase(phase)) return { status: 'coma' }
+  const death = current.status === 'dead' && current.death ? current.death : { phase: { ...phase }, announced: isDayPhase(phase) }
+  return { status: 'dead', death }
+}
+
+const withState = (a: Assignment, hp: number, s: Pick<Assignment, 'status' | 'death'>): Assignment =>
+  ({ playerId: a.playerId, roleId: a.roleId, hp, status: s.status, ...(s.death ? { death: s.death } : {}) })
+
+/** HP می‌تواند منفی شود؛ مقدار واقعی ثبت می‌شود. */
 export function applyHpChange(game: Game, playerId: string, delta: number, reason = ''): Game {
   if (!Number.isFinite(delta) || delta === 0) return game
   const current = game.assignments.find(a => a.playerId === playerId)
   if (!current) return game
-  const before = current.hp
-  const after = before + delta
+  const after = current.hp + delta
   const event: HpEvent = {
-    id: makeId(), playerId, delta, hpBefore: before, hpAfter: after,
+    id: makeId(), playerId, delta, hpBefore: current.hp, hpAfter: after,
     phase: { ...game.phase }, at: Date.now(), ...(reason.trim() ? { reason: reason.trim() } : {}),
+    prev: { status: current.status, ...(current.death ? { death: current.death } : {}) },
   }
-  const assignment: Assignment = { ...current, hp: after, status: after <= 0 ? 'dead' : 'alive' }
-  if (after <= 0 && before > 0) assignment.death = { phase: { ...game.phase }, announced: isDayPhase(game.phase) }
-  if (after > 0) delete assignment.death
+  const assignment = withState(current, after, statusAfter(current, after, game.phase))
   return { ...game, assignments: game.assignments.map(a => a.playerId === playerId ? assignment : a), hpEvents: [...game.hpEvents, event] }
 }
 
@@ -28,8 +40,8 @@ export function undoLastHpChange(game: Game, playerId: string): Game {
   if (!target || !current) return game
   const after = target.hpBefore
   const event: HpEvent = { id: makeId(), playerId, delta: after - current.hp, hpBefore: current.hp, hpAfter: after, phase: { ...game.phase }, at: Date.now(), reason: 'بازگردانی تغییر قبلی', undoOf: target.id }
-  const assignment: Assignment = { ...current, hp: after, status: after <= 0 ? 'dead' : 'alive' }
-  if (after > 0) delete assignment.death
+  const restored = target.prev ?? { status: after > 0 ? 'alive' as const : 'dead' as const }
+  const assignment = withState(current, after, restored)
   return { ...game, assignments: game.assignments.map(a => a.playerId === playerId ? assignment : a), hpEvents: [...game.hpEvents, event] }
 }
 
@@ -51,3 +63,16 @@ export function pendingAnnouncements(game: Game): Assignment[] {
 export function markAnnounced(game: Game): Game {
   return { ...game, assignments: game.assignments.map(a => a.death && !a.death.announced ? { ...a, death: { ...a.death, announced: true } } : a) }
 }
+
+export const LOW_HP = 50
+
+/** هشدار روز: نیمی از بازیکنانِ در بازی (نه مرده، نه کما) یا بیشتر HP کمتر از ۵۰ دارند. */
+export function lowHpAlarm(game: Game) {
+  const inPlay = game.assignments.filter(a => a.status === 'alive')
+  const low = inPlay.filter(a => a.hp < LOW_HP).length
+  return { low, total: inPlay.length, active: isDayPhase(game.phase) && inPlay.length > 0 && low * 2 >= inPlay.length }
+}
+
+/** کم‌HP‌ترین بازیکنان بین کسانی که نه مرده‌اند و نه در کما */
+export const lowestHpPlayers = (game: Game, n = 3): Assignment[] =>
+  game.assignments.filter(a => a.status === 'alive').sort((a, b) => a.hp - b.hp).slice(0, n)
