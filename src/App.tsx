@@ -1,41 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Game, Phase, Player } from "./domain/types";
-import {
-  applyHpChange,
-  lowHpAlarm,
-  lowestHpPlayers,
-  pendingAnnouncements,
-  undoLastHpChange,
-} from "./domain/hp";
-import { makeId } from "./domain/id";
-import { setPlayerStatus } from "./domain/status";
-import {
-  buildRoleDeck,
-  canAssignRole,
-  makeAssignments,
-} from "./domain/roleAssignment";
-import { loadGame, saveGame } from "./state/storage";
+import { useMemo, useState } from "react";
+import { lowHpAlarm, lowestHpPlayers } from "./scenarios/damage/hp";
+import { pendingAnnouncements } from "./game/phase";
+import { loadGame } from "./services/storage";
+import { useDealing } from "./hooks/useDealing";
+import { useGameActions } from "./hooks/useGameActions";
+import { AppView } from "./AppView";
+import { useHpForm } from "./scenarios/damage/useHpForm";
+import { usePersistedGame } from "./hooks/usePersistedGame";
+import { useToast } from "./hooks/useToast";
 import { damageScenario } from "./scenarios/damage";
-import { getScenario, scenarios } from "./scenarios";
-import { defaultNames, type Screen } from "./lib/format";
-import { shuffled } from "./lib/random";
-import { AppHeader } from "./components/AppHeader";
-import { DesktopNotice } from "./components/DesktopNotice";
-import { HpSheet } from "./components/HpSheet";
-import { PlayerListSheet } from "./components/PlayerListSheet";
-import { AnnouncementDialog } from "./components/AnnouncementDialog";
-import { ResetDialog } from "./components/ResetDialog";
-import { PlayerStatusSheet } from "./components/PlayerStatusSheet";
-import { SetupScreen } from "./screens/SetupScreen";
-import { DealScreen } from "./screens/DealScreen";
-import { RevealScreen } from "./screens/RevealScreen";
-import { GameScreen } from "./screens/GameScreen";
-import { HistoryScreen } from "./screens/HistoryScreen";
+import { getScenario } from "./scenarios";
+import { defaultNames, type Screen } from "./utils/format";
 
 const saved = loadGame();
 
 export default function App() {
-  const [game, setGame] = useState<Game | null>(saved);
+  const [game, setGame] = usePersistedGame(saved);
   const [screen, setScreen] = useState<Screen>(() => {
     return saved?.status === "running"
       ? "game"
@@ -50,44 +30,42 @@ export default function App() {
       saved?.players.map((p) => p.name) ??
       defaultNames(damageScenario.settings.playerCount),
   );
-  const [selectedPlayerId, setSelectedPlayerId] = useState(
-    () => saved?.selectedPlayerId ?? "",
-  );
-  const [selectedRoleId, setSelectedRoleId] = useState("");
-  const [revealedRoleId, setRevealedRoleId] = useState(() => {
-    return (
-      saved?.assignments.find((a) => a.playerId === saved.selectedPlayerId)
-        ?.roleId ?? ""
-    );
-  });
-  const [showCard, setShowCard] = useState(false);
-  const [hpPlayerId, setHpPlayerId] = useState("");
-  const [customAmount, setCustomAmount] = useState("");
-  const [customReason, setCustomReason] = useState("");
-  const [selectedCauseId, setSelectedCauseId] = useState("");
-  const [roulettePartnerId, setRoulettePartnerId] = useState("");
-  const [customMode, setCustomMode] = useState<"damage" | "heal">("damage");
+  const {
+    selectedPlayerId,
+    setSelectedPlayerId,
+    selectedRoleId,
+    setSelectedRoleId,
+    revealedRoleId,
+    setRevealedRoleId,
+    showCard,
+    setShowCard,
+    randomDealing,
+    setRandomDealing,
+    randomRevealQueue,
+    setRandomRevealQueue,
+  } = useDealing(saved);
+  const {
+    hpPlayerId,
+    setHpPlayerId,
+    customAmount,
+    setCustomAmount,
+    customReason,
+    setCustomReason,
+    selectedCauseId,
+    setSelectedCauseId,
+    roulettePartnerId,
+    setRoulettePartnerId,
+    customMode,
+    setCustomMode,
+    openPlayer,
+    clearInputs,
+  } = useHpForm();
   const [setupScenarioId, setSetupScenarioId] = useState(damageScenario.id);
   const [statusPlayerId, setStatusPlayerId] = useState("");
   const [listKind, setListKind] = useState<"dead" | "coma" | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
-  const [toast, setToast] = useState("");
+  const { toast, setToast } = useToast();
   const [phaseMenu, setPhaseMenu] = useState(false);
-  const [randomDealing, setRandomDealing] = useState(() => {
-    return saved?.status === "dealing" && saved.dealMode === "random";
-  });
-  const [randomRevealQueue, setRandomRevealQueue] = useState<string[]>(
-    () => saved?.revealQueue ?? [],
-  );
-
-  useEffect(() => {
-    saveGame(game);
-  }, [game]);
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(""), 2300);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
 
   const scenario =
     getScenario(game?.scenarioId ?? setupScenarioId) ?? damageScenario;
@@ -112,20 +90,7 @@ export default function App() {
   const listPlayers = assignments.filter((a) => a.status === listKind);
   const openHp = (id: string) => {
     if (!scenario.settings.hp) return setStatusPlayerId(id);
-    setHpPlayerId(id);
-    setCustomMode("damage");
-    setRoulettePartnerId("");
-  };
-  const selectScenario = (id: string) => {
-    const next = getScenario(id);
-    if (!next) return;
-    setSetupScenarioId(id);
-    setNames((old) =>
-      Array.from(
-        { length: next.settings.playerCount },
-        (_, i) => old[i] ?? `بازیکن ${i + 1}`,
-      ),
-    );
+    openPlayer(id);
   };
   const statusPlayer = players.find((p) => p.id === statusPlayerId);
   const statusAssignment = assignments.find(
@@ -133,396 +98,117 @@ export default function App() {
   );
   const deadCount = assignments.filter((a) => a.status === "dead").length;
 
-  function startGame() {
-    const cleaned = names.map((n, i) => n.trim() || `بازیکن ${i + 1}`);
-    const p: Player[] = cleaned.map((name) => ({ id: makeId(), name }));
-    const next: Game = {
-      id: makeId(),
-      scenarioId: scenario.id,
-      players: p,
-      assignments: [],
-      phase: { kind: "intro-day", number: 0 },
-      status: "dealing",
-      hpEvents: [],
-      dealMode: "manual",
-    };
-    setGame(next);
-    setScreen("deal");
-    setSelectedPlayerId(p[0].id);
-    setSelectedRoleId("");
-    setToast("بازیکنان ثبت شدند");
-  }
-
-  function assignRole() {
-    if (!game || !selectedPlayerId || !selectedRoleId) return;
-    if (assignments.some((a) => a.playerId === selectedPlayerId)) {
-      setToast("این بازیکن نقش دریافت کرده است");
-      return;
-    }
-    const used = assignments.map((a) => a.roleId);
-    if (!canAssignRole(scenario, used, selectedRoleId, players.length)) {
-      setToast("ظرفیت این نقش تکمیل شده است");
-      return;
-    }
-    const roleIds = [...used, selectedRoleId];
-    const newAssignment = makeAssignments(
-      [players.find((p) => p.id === selectedPlayerId)!],
-      [selectedRoleId],
-      scenario.settings.initialHp,
-    )[0];
-    setGame({
-      ...game,
-      assignments: [...assignments, newAssignment],
-      status: roleIds.length === players.length ? "running" : "dealing",
-    });
-    setRevealedRoleId(selectedRoleId);
-    setShowCard(false);
-    setScreen("reveal");
-  }
-
-  function startRandomDealing() {
-    if (!game || assignments.length > 0) return;
-    const playerOrder = shuffled(players);
-    const roleIds = shuffled(buildRoleDeck(scenario));
-    const allAssignments = makeAssignments(
-      playerOrder,
-      roleIds,
-      scenario.settings.initialHp,
-    );
-    setGame({
-      ...game,
-      assignments: allAssignments,
-      status: "dealing",
-      phase: { kind: "intro-day", number: 0 },
-      dealMode: "random",
-      selectedPlayerId: playerOrder[0]?.id,
-      revealQueue: playerOrder.slice(1).map((player) => player.id),
-    });
-    const queue = playerOrder.map((player) => player.id);
-    setRandomRevealQueue(queue.slice(1));
-    setRandomDealing(true);
-    setSelectedPlayerId(queue[0] ?? "");
-    setRevealedRoleId(
-      allAssignments.find((a) => a.playerId === queue[0])?.roleId ?? "",
-    );
-    setShowCard(false);
-    setScreen("reveal");
-    setToast("نقش‌ها به‌صورت تصادفی تخصیص داده شدند");
-  }
-
-  function finishReveal() {
-    setShowCard(false);
-    if (!game) return;
-    if (randomDealing) {
-      const nextPlayerId = randomRevealQueue[0];
-      if (nextPlayerId) {
-        setRandomRevealQueue((queue) => queue.slice(1));
-        setSelectedPlayerId(nextPlayerId);
-        setGame({
-          ...game,
-          selectedPlayerId: nextPlayerId,
-          revealQueue: randomRevealQueue.slice(1),
-        });
-        setRevealedRoleId(
-          game.assignments.find((a) => a.playerId === nextPlayerId)?.roleId ??
-            "",
-        );
-        return;
-      }
-      setRandomDealing(false);
-      setRandomRevealQueue([]);
-      setRevealedRoleId("");
-      setGame({
-        ...game,
-        status: "running",
-        phase: { kind: "intro-day", number: 0 },
-        dealMode: undefined,
-        selectedPlayerId: undefined,
-        revealQueue: undefined,
-      });
-      setScreen("game");
-      setToast("تقسیم نقش‌ها کامل شد؛ روز معارفه شروع شد");
-      return;
-    }
-    setRevealedRoleId("");
-    const nextUnassigned = players.find(
-      (p) => !game.assignments.some((a) => a.playerId === p.id),
-    );
-    if (nextUnassigned) {
-      setSelectedPlayerId(nextUnassigned.id);
-      setSelectedRoleId("");
-      setScreen("deal");
-    } else {
-      setGame({
-        ...game,
-        status: "running",
-        phase: { kind: "intro-day", number: 0 },
-      });
-      setScreen("game");
-      setToast("روز معارفه شروع شد");
-    }
-  }
-
-  function restartDealing() {
-    if (!game) return;
-    setGame({
-      ...game,
-      assignments: [],
-      hpEvents: [],
-      status: "dealing",
-      phase: { kind: "intro-day", number: 0 },
-      dealMode: "manual",
-      selectedPlayerId: players[0]?.id,
-      revealQueue: undefined,
-    });
-    setRandomDealing(false);
-    setRandomRevealQueue([]);
-    setSelectedPlayerId(players[0]?.id ?? "");
-    setSelectedRoleId("");
-    setConfirmReset(false);
-    setScreen("deal");
-    setToast("تقسیم نقش از ابتدا شروع شد");
-  }
-
-  function changeHp(delta: number, reason = "") {
-    if (!game || !hpPlayerId) return;
-    const next = applyHpChange(game, hpPlayerId, delta, reason);
-    if (next === game) {
-      setToast("تغییری اعمال نشد");
-      return;
-    }
-    setGame(next);
-    setCustomAmount("");
-    setCustomReason("");
-    setSelectedCauseId("");
-    const a = next.assignments.find((item) => item.playerId === hpPlayerId);
-    setToast(
-      a?.status === "dead"
-        ? "HP به صفر یا کمتر رسید؛ بازیکن مرد"
-        : a?.status === "coma"
-          ? "HP دقیقاً صفر شد؛ بازیکن در کما رفت"
-          : `HP جدید: ${a?.hp}`,
-    );
-  }
-
-  function applyRoulette() {
-    if (
-      !game ||
-      !hpPlayerId ||
-      !roulettePartnerId ||
-      roulettePartnerId === hpPlayerId
-    ) {
-      setToast("بازیکن دوم رولت را انتخاب کن");
-      return;
-    }
-    const first = game.assignments.find((a) => a.playerId === hpPlayerId);
-    const second = game.assignments.find(
-      (a) => a.playerId === roulettePartnerId,
-    );
-    const firstPlayer = game.players.find((p) => p.id === hpPlayerId);
-    const secondPlayer = game.players.find((p) => p.id === roulettePartnerId);
-    if (!first || !second || !firstPlayer || !secondPlayer) return;
-    const sharedHp = (first.hp + second.hp) / 2;
-    const reason = `رولت روسی: میانگین HP با ${secondPlayer.name}`;
-    let next = applyHpChange(game, hpPlayerId, sharedHp - first.hp, reason);
-    next = applyHpChange(
-      next,
-      roulettePartnerId,
-      sharedHp - second.hp,
-      `رولت روسی: میانگین HP با ${firstPlayer.name}`,
-    );
-    if (next === game) {
-      setToast("HP دو بازیکن از قبل برابر است");
-      return;
-    }
-    setGame(next);
-    setCustomReason("");
-    setSelectedCauseId("");
-    setToast(`HP هر دو بازیکن به ${sharedHp} رسید`);
-  }
-
-  function undoHp() {
-    if (!game || !hpPlayerId) return;
-    const next = undoLastHpChange(game, hpPlayerId);
-    if (next === game) {
-      setToast("تغییری برای بازگردانی وجود ندارد");
-      return;
-    }
-    setGame(next);
-    setToast("آخرین تغییر HP بازگردانده شد");
-  }
-
-  function setPhase(phase: Phase) {
-    if (!game) return;
-    setGame({ ...game, phase });
-    setPhaseMenu(false);
-  }
-
-  function confirmResetAction() {
-    if (screen === "deal") restartDealing();
-    else {
-      setGame(null);
-      setNames(defaultNames(scenario.settings.playerCount));
-      setScreen("setup");
-      setHpPlayerId("");
-      setConfirmReset(false);
-    }
-  }
+  const {
+    selectScenario,
+    startGame,
+    assignRole,
+    startRandomDealing,
+    finishReveal,
+    beginGame,
+    changeHp,
+    applyRoulette,
+    undoHp,
+    setPhase,
+    confirmResetAction,
+    setPlayerStatusForCurrentGame,
+  } = useGameActions({
+    game,
+    setGame,
+    screen,
+    setScreen,
+    scenario,
+    setupScenarioId,
+    setSetupScenarioId,
+    names,
+    setNames,
+    players,
+    assignments,
+    selectedPlayerId,
+    setSelectedPlayerId,
+    selectedRoleId,
+    setSelectedRoleId,
+    setRevealedRoleId,
+    setShowCard,
+    randomDealing,
+    setRandomDealing,
+    randomRevealQueue,
+    setRandomRevealQueue,
+    hpPlayerId,
+    setHpPlayerId,
+    roulettePartnerId,
+    setCustomReason,
+    setSelectedCauseId,
+    clearInputs,
+    setConfirmReset,
+    setToast,
+    setPhaseMenu,
+  });
 
   return (
-    <>
-      <div className="mobile-shell block sm:hidden">
-        <AppHeader game={game} />
-
-        {screen === "setup" && (
-          <SetupScreen
-            scenario={scenario}
-            scenarios={scenarios}
-            selectScenario={selectScenario}
-            names={names}
-            setNames={setNames}
-            startGame={startGame}
-          />
-        )}
-
-        {screen === "deal" && game && (
-          <DealScreen
-            players={players}
-            assignments={assignments}
-            assignedCount={assignedCount}
-            startRandomDealing={startRandomDealing}
-            assignRole={assignRole}
-            selectedPlayerId={selectedPlayerId}
-            setSelectedPlayerId={setSelectedPlayerId}
-            selectedRoleId={selectedRoleId}
-            setSelectedRoleId={setSelectedRoleId}
-            scenario={scenario}
-            roleCounts={roleCounts}
-            setConfirmReset={setConfirmReset}
-          />
-        )}
-
-        {screen === "reveal" && (
-          <RevealScreen
-            players={players}
-            finishReveal={finishReveal}
-            selectedPlayerId={selectedPlayerId}
-            revealedRoleId={revealedRoleId}
-            showCard={showCard}
-            setShowCard={setShowCard}
-          />
-        )}
-
-        {screen === "game" && game && (
-          <GameScreen
-            hasHp={scenario.settings.hp}
-            game={game}
-            players={players}
-            assignments={assignments}
-            setConfirmReset={setConfirmReset}
-            phaseMenu={phaseMenu}
-            setPhaseMenu={setPhaseMenu}
-            setPhase={setPhase}
-            setGame={setGame}
-            alarm={alarm}
-            lowest={lowest}
-            openHp={openHp}
-            aliveCount={aliveCount}
-            comaCount={comaCount}
-            deadCount={deadCount}
-            setListKind={setListKind}
-            setScreen={setScreen}
-          />
-        )}
-
-        {screen === "history" && game && (
-          <HistoryScreen
-            players={players}
-            setScreen={setScreen}
-            hpEvents={hpEvents}
-          />
-        )}
-
-        {game &&
-          hpPlayerId &&
-          selectedPlayer &&
-          selectedAssignment &&
-          screen === "game" && (
-            <HpSheet
-              game={game}
-              players={players}
-              assignments={assignments}
-              undoHp={undoHp}
-              applyRoulette={applyRoulette}
-              hpPlayerId={hpPlayerId}
-              setHpPlayerId={setHpPlayerId}
-              selectedPlayer={selectedPlayer}
-              selectedAssignment={selectedAssignment}
-              customAmount={customAmount}
-              setCustomAmount={setCustomAmount}
-              customReason={customReason}
-              setCustomReason={setCustomReason}
-              selectedCauseId={selectedCauseId}
-              setSelectedCauseId={setSelectedCauseId}
-              roulettePartnerId={roulettePartnerId}
-              setRoulettePartnerId={setRoulettePartnerId}
-              customMode={customMode}
-              setCustomMode={setCustomMode}
-              changeHp={changeHp}
-            />
-          )}
-
-        {listKind && screen === "game" && (
-          <PlayerListSheet
-            hasHp={scenario.settings.hp}
-            players={players}
-            openHp={openHp}
-            setListKind={setListKind}
-            listKind={listKind}
-            listPlayers={listPlayers}
-          />
-        )}
-        {screen === "game" && game && pending.length > 0 && (
-          <AnnouncementDialog
-            game={game}
-            players={players}
-            setGame={setGame}
-            pending={pending}
-          />
-        )}
-        {game &&
-          !scenario.settings.hp &&
-          statusPlayer &&
-          statusAssignment &&
-          screen === "game" && (
-            <PlayerStatusSheet
-              player={statusPlayer}
-              assignment={statusAssignment}
-              onSetStatus={(status) =>
-                setGame((g) =>
-                  g ? setPlayerStatus(g, statusPlayer.id, status) : g,
-                )
-              }
-              onClose={() => setStatusPlayerId("")}
-            />
-          )}
-        {confirmReset && (
-          <ResetDialog
-            onCancel={() => setConfirmReset(false)}
-            onConfirm={confirmResetAction}
-          />
-        )}
-        {toast && (
-          <div
-            role="status"
-            className="fixed bottom-5 left-1/2 z-[60] -translate-x-1/2 rounded-2xl border border-white/10 bg-[#252631] px-4 py-3 text-xs font-bold shadow-2xl"
-          >
-            {toast}
-          </div>
-        )}
-        <div className="safe-bottom" />
-      </div>
-      <DesktopNotice />
-    </>
+    <AppView
+      game={game}
+      screen={screen}
+      scenario={scenario}
+      names={names}
+      setNames={setNames}
+      selectScenario={selectScenario}
+      startGame={startGame}
+      players={players}
+      assignments={assignments}
+      assignedCount={assignedCount}
+      startRandomDealing={startRandomDealing}
+      beginGame={beginGame}
+      assignRole={assignRole}
+      selectedPlayerId={selectedPlayerId}
+      setSelectedPlayerId={setSelectedPlayerId}
+      selectedRoleId={selectedRoleId}
+      setSelectedRoleId={setSelectedRoleId}
+      roleCounts={roleCounts}
+      setConfirmReset={setConfirmReset}
+      finishReveal={finishReveal}
+      revealedRoleId={revealedRoleId}
+      showCard={showCard}
+      setShowCard={setShowCard}
+      phaseMenu={phaseMenu}
+      setPhaseMenu={setPhaseMenu}
+      setPhase={setPhase}
+      setGame={setGame}
+      alarm={alarm}
+      lowest={lowest}
+      openHp={openHp}
+      aliveCount={aliveCount}
+      comaCount={comaCount}
+      deadCount={deadCount}
+      setListKind={setListKind}
+      setScreen={setScreen}
+      hpEvents={hpEvents}
+      hpPlayerId={hpPlayerId}
+      setHpPlayerId={setHpPlayerId}
+      selectedPlayer={selectedPlayer}
+      selectedAssignment={selectedAssignment}
+      undoHp={undoHp}
+      setStatusPlayerId={setStatusPlayerId}
+      applyRoulette={applyRoulette}
+      customAmount={customAmount}
+      setCustomAmount={setCustomAmount}
+      customReason={customReason}
+      setCustomReason={setCustomReason}
+      selectedCauseId={selectedCauseId}
+      setSelectedCauseId={setSelectedCauseId}
+      roulettePartnerId={roulettePartnerId}
+      setRoulettePartnerId={setRoulettePartnerId}
+      customMode={customMode}
+      setCustomMode={setCustomMode}
+      changeHp={changeHp}
+      listKind={listKind}
+      listPlayers={listPlayers}
+      pending={pending}
+      statusPlayer={statusPlayer}
+      statusAssignment={statusAssignment}
+      setPlayerStatusForCurrentGame={setPlayerStatusForCurrentGame}
+      confirmReset={confirmReset}
+      confirmResetAction={confirmResetAction}
+      toast={toast}
+    />
   );
 }

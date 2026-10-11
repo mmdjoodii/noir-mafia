@@ -1,6 +1,7 @@
-import type { Role, Scenario } from "../domain/types";
+import type { Role, Scenario } from "../types";
 
-const img = (name: string) => `${import.meta.env.BASE_URL}cards/${name}.webp`;
+const img = (name: string) =>
+  `${import.meta.env.BASE_URL}cards/damage/${name}.webp`;
 
 export const damageRoles: Role[] = [
   {

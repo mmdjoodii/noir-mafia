@@ -1,22 +1,24 @@
 import { X } from "lucide-react";
-import type { Assignment, Player } from "../domain/types";
-import { statusLabel } from "../lib/format";
-import { rolesById as roleMap } from "../scenarios";
+import type { Assignment, Player } from "../types";
+import { statusLabel } from "../utils/format";
+import { getScenarioRoleMap } from "../scenarios";
 import { RoleImage } from "./RoleImage";
 
 /** سناریوهای بدون HP: گرداننده وضعیت بازیکن را دستی مشخص می‌کند. */
 export function PlayerStatusSheet({
   player,
+  scenarioId,
   assignment,
   onSetStatus,
   onClose,
 }: {
   player: Player;
+  scenarioId: string;
   assignment: Assignment;
   onSetStatus: (status: "alive" | "dead") => void;
   onClose: () => void;
 }) {
-  const role = roleMap[assignment.roleId];
+  const role = getScenarioRoleMap(scenarioId)[assignment.roleId];
   const dead = assignment.status === "dead";
   return (
     <div

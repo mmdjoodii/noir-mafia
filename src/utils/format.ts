@@ -1,4 +1,4 @@
-import type { Assignment, Phase } from "../domain/types";
+import type { Assignment, Phase } from "../types";
 
 export const phaseLabel = (phase: Phase) => {
   if (phase.kind === "intro-day") return "روز معارفه";

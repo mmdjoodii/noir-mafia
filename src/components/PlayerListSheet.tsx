@@ -1,11 +1,12 @@
 import { RoleImage } from "./RoleImage";
 import { X } from "lucide-react";
-import type { Assignment, Player } from "../domain/types";
-import { statusLabel } from "../lib/format";
-import { rolesById as roleMap } from "../scenarios";
+import type { Assignment, Player } from "../types";
+import { statusLabel } from "../utils/format";
+import { getScenarioRoleMap } from "../scenarios";
 
 export function PlayerListSheet({
   players,
+  scenarioId,
   openHp,
   setListKind,
   listKind,
@@ -13,12 +14,14 @@ export function PlayerListSheet({
   hasHp,
 }: {
   players: Player[];
+  scenarioId: string;
   openHp: (id: string) => void;
   setListKind: (k: "dead" | "coma" | null) => void;
   listKind: "dead" | "coma";
   listPlayers: Assignment[];
   hasHp: boolean;
 }) {
+  const roleMap = getScenarioRoleMap(scenarioId);
   return (
     <div
       className="fixed inset-0 z-40 flex items-end justify-center bg-black/70 backdrop-blur-sm"

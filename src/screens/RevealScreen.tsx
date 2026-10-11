@@ -1,10 +1,12 @@
+import { useEffect } from "react";
 import { RoleImage } from "../components/RoleImage";
 import { Check, Shield } from "lucide-react";
-import type { Player } from "../domain/types";
-import { rolesById as roleMap } from "../scenarios";
+import type { Player } from "../types";
+import { getScenarioRoleMap } from "../scenarios";
 
 export function RevealScreen({
   players,
+  scenarioId,
   finishReveal,
   selectedPlayerId,
   revealedRoleId,
@@ -12,12 +14,29 @@ export function RevealScreen({
   setShowCard,
 }: {
   players: Player[];
+  scenarioId: string;
   finishReveal: () => void;
   selectedPlayerId: string;
   revealedRoleId: string;
   showCard: boolean;
   setShowCard: (v: boolean) => void;
 }) {
+  const roleMap = getScenarioRoleMap(scenarioId);
+  // کارت از قبل بارگذاری می‌شود تا هنگام نگه‌داشتن انگشت فوراً نمایش داده شود
+  useEffect(() => {
+    const role = roleMap[revealedRoleId];
+    if (role) new Image().src = role.cardImage;
+  }, [revealedRoleId, roleMap]);
+  // اگر برنامه به پس‌زمینه رفت یا پنجره فوکوس را از دست داد، کارت پنهان شود
+  useEffect(() => {
+    const hide = () => setShowCard(false);
+    document.addEventListener("visibilitychange", hide);
+    window.addEventListener("blur", hide);
+    return () => {
+      document.removeEventListener("visibilitychange", hide);
+      window.removeEventListener("blur", hide);
+    };
+  }, [setShowCard]);
   return (
     <main className="flex min-h-[calc(100dvh-80px)] flex-col items-center px-6 pb-8 pt-4 text-center">
       <div className="mb-6 w-full">

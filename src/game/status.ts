@@ -1,5 +1,5 @@
-import { isDayPhase } from "./hp";
-import type { Game } from "./types";
+import { isDayPhase } from "./phase";
+import type { Game } from "../types";
 
 /** تغییر دستی وضعیت زنده/مرده برای سناریوهای بدون HP. مرگ شب تا اعلام صبح اعلام‌نشده می‌ماند. */
 export function setPlayerStatus(

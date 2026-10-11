@@ -1,13 +1,14 @@
 import { RoleImage } from "../components/RoleImage";
 import { Activity, ArrowLeft, Check, RotateCcw } from "lucide-react";
-import type { Assignment, Player, Scenario } from "../domain/types";
-import { rolesById as roleMap } from "../scenarios";
+import type { Assignment, Player, Scenario } from "../types";
+import { getScenarioRoleMap } from "../scenarios";
 
 export function DealScreen({
   players,
   assignments,
   assignedCount,
   startRandomDealing,
+  beginGame,
   assignRole,
   selectedPlayerId,
   setSelectedPlayerId,
@@ -21,6 +22,7 @@ export function DealScreen({
   assignments: Assignment[];
   assignedCount: number;
   startRandomDealing: () => void;
+  beginGame: () => void;
   assignRole: () => void;
   selectedPlayerId: string;
   setSelectedPlayerId: (id: string) => void;
@@ -30,6 +32,7 @@ export function DealScreen({
   roleCounts: Record<string, number>;
   setConfirmReset: (v: boolean) => void;
 }) {
+  const roleMap = getScenarioRoleMap(scenario.id);
   return (
     <main className="px-5 pb-10">
       <div className="mb-5 mt-3 flex items-end justify-between">
@@ -55,6 +58,14 @@ export function DealScreen({
           style={{ width: `${(assignedCount / players.length) * 100}%` }}
         />
       </div>
+      {assignedCount === players.length && (
+        <button
+          onClick={beginGame}
+          className="mb-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-500 py-4 font-bold text-white shadow-lg shadow-violet-950/40"
+        >
+          همه نقش‌ها تقسیم شد؛ شروع بازی
+        </button>
+      )}
       {assignedCount === 0 && (
         <button
           onClick={startRandomDealing}

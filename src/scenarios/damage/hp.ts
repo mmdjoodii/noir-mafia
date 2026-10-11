@@ -1,8 +1,6 @@
-import type { Assignment, Game, HpEvent, Phase } from "./types";
-import { makeId } from "./id";
-
-export const isDayPhase = (p: Phase) =>
-  p.kind === "day" || p.kind === "intro-day";
+import type { Assignment, Game, HpEvent, Phase } from "../../types";
+import { makeId } from "../../utils/id";
+import { isDayPhase } from "../../game/phase";
 
 /**
  * وضعیت بعد از تغییر HP:
@@ -41,7 +39,7 @@ export function applyHpChange(
   delta: number,
   reason = "",
 ): Game {
-  if (!Number.isFinite(delta) || delta === 0) return game;
+  if (!Number.isInteger(delta) || delta === 0) return game;
   const current = game.assignments.find((a) => a.playerId === playerId);
   if (!current) return game;
   const after = current.hp + delta;
@@ -105,38 +103,6 @@ export function undoLastHpChange(game: Game, playerId: string): Game {
       a.playerId === playerId ? assignment : a,
     ),
     hpEvents: [...game.hpEvents, event],
-  };
-}
-
-export function nextPhase(phase: Phase): Phase {
-  switch (phase.kind) {
-    case "intro-day":
-      return { kind: "intro-night", number: 0 };
-    case "intro-night":
-      return { kind: "day", number: 1 };
-    case "day":
-      return { kind: "night", number: phase.number };
-    case "night":
-      return { kind: "day", number: phase.number + 1 };
-  }
-}
-
-/** مرگ‌های شبِ اعلام‌نشده؛ فقط وقتی بازی در روز است باید اعلام شوند. */
-export function pendingAnnouncements(game: Game): Assignment[] {
-  if (!isDayPhase(game.phase)) return [];
-  return game.assignments.filter(
-    (a) => a.status === "dead" && a.death && !a.death.announced,
-  );
-}
-
-export function markAnnounced(game: Game): Game {
-  return {
-    ...game,
-    assignments: game.assignments.map((a) =>
-      a.death && !a.death.announced
-        ? { ...a, death: { ...a.death, announced: true } }
-        : a,
-    ),
   };
 }
 
