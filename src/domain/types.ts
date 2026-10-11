@@ -8,11 +8,17 @@ export interface Role {
   side: Side;
   cardImage: string;
 }
+export interface RoleSlot {
+  roleId: string;
+  count: number;
+}
 export interface Scenario {
   id: string;
+  /** سناریوهای هم‌خانواده (مثل بازپرس ۱۰/۱۲/۱۳) در انتخاب سناریو یک گزینه نشان داده می‌شوند */
+  family: { id: string; name: string };
   name: string;
-  roles: { roleId: string; count: number }[];
-  settings: { initialHp: number; playerCount: number };
+  roles: RoleSlot[];
+  settings: { initialHp: number; playerCount: number; hp: boolean };
 }
 export interface Player {
   id: string;

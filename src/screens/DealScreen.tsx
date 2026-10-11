@@ -1,3 +1,4 @@
+import { RoleImage } from "../components/RoleImage";
 import { Activity, ArrowLeft, Check, RotateCcw } from "lucide-react";
 import type { Assignment, Player, Scenario } from "../domain/types";
 import { rolesById as roleMap } from "../scenarios";
@@ -43,7 +44,7 @@ export function DealScreen({
         <div className="text-left">
           <div className="text-2xl font-black tabular-nums">
             {assignedCount}
-            <span className="text-zinc-600">/10</span>
+            <span className="text-zinc-600">/{players.length}</span>
           </div>
           <div className="text-[10px] text-zinc-500">تقسیم‌شده</div>
         </div>
@@ -51,7 +52,7 @@ export function DealScreen({
       <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-white/10">
         <div
           className="h-full rounded-full bg-violet-400 transition-all"
-          style={{ width: `${assignedCount * 10}%` }}
+          style={{ width: `${(assignedCount / players.length) * 100}%` }}
         />
       </div>
       {assignedCount === 0 && (
@@ -111,9 +112,8 @@ export function DealScreen({
                 onClick={() => setSelectedRoleId(roleId)}
                 className={`flex w-full items-center gap-3 rounded-2xl border p-2 text-right transition ${left <= 0 ? "border-white/[0.04] opacity-35" : active ? "border-violet-400/60 bg-violet-500/10" : "border-white/[0.06] bg-black/10"}`}
               >
-                <img
-                  src={role.cardImage}
-                  alt=""
+                <RoleImage
+                  role={role}
                   className="h-14 w-10 rounded-lg bg-black/30 object-cover"
                 />
                 <span className="min-w-0 flex-1">

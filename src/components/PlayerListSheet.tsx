@@ -1,3 +1,4 @@
+import { RoleImage } from "./RoleImage";
 import { X } from "lucide-react";
 import type { Assignment, Player } from "../domain/types";
 import { statusLabel } from "../lib/format";
@@ -9,12 +10,14 @@ export function PlayerListSheet({
   setListKind,
   listKind,
   listPlayers,
+  hasHp,
 }: {
   players: Player[];
   openHp: (id: string) => void;
   setListKind: (k: "dead" | "coma" | null) => void;
   listKind: "dead" | "coma";
   listPlayers: Assignment[];
+  hasHp: boolean;
 }) {
   return (
     <div
@@ -55,9 +58,8 @@ export function PlayerListSheet({
                 }}
                 className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3 text-right"
               >
-                <img
-                  src={roleMap[a.roleId].cardImage}
-                  alt=""
+                <RoleImage
+                  role={roleMap[a.roleId]}
                   className="h-14 w-10 rounded-lg bg-black/30 object-cover"
                 />
                 <div className="min-w-0 flex-1">
@@ -68,12 +70,14 @@ export function PlayerListSheet({
                     {roleMap[a.roleId].name} · {statusLabel(a)}
                   </div>
                 </div>
-                <span
-                  dir="ltr"
-                  className="text-lg font-black tabular-nums text-rose-300"
-                >
-                  {a.hp}
-                </span>
+                {hasHp && (
+                  <span
+                    dir="ltr"
+                    className="text-lg font-black tabular-nums text-rose-300"
+                  >
+                    {a.hp}
+                  </span>
+                )}
               </button>
             ))}
           </div>

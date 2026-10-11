@@ -1,3 +1,4 @@
+import { RoleImage } from "../components/RoleImage";
 import { nextPhase } from "../domain/hp";
 import type { Dispatch, SetStateAction } from "react";
 import {
@@ -35,9 +36,7 @@ export function GameScreen({
   deadCount,
   setListKind,
   setScreen,
-  setHpPlayerId,
-  setRoulettePartnerId,
-  setCustomMode,
+  hasHp,
 }: {
   game: Game;
   players: Player[];
@@ -55,9 +54,7 @@ export function GameScreen({
   deadCount: number;
   setListKind: (k: "dead" | "coma" | null) => void;
   setScreen: (s: Screen) => void;
-  setHpPlayerId: (id: string) => void;
-  setRoulettePartnerId: (v: string) => void;
-  setCustomMode: (m: "damage" | "heal") => void;
+  hasHp: boolean;
 }) {
   return (
     <main className="px-4 pb-28">
@@ -66,7 +63,9 @@ export function GameScreen({
           <p className="text-xs font-bold text-violet-300">بازی در حال اجرا</p>
           <h1 className="mt-1 text-2xl font-black">وضعیت بازیکنان</h1>
           <p className="mt-1 text-xs text-zinc-500">
-            مدیریت HP و ثبت اتفاقات بازی
+            {hasHp
+              ? "مدیریت HP و ثبت اتفاقات بازی"
+              : "مدیریت وضعیت بازیکنان (زنده / مرده)"}
           </p>
         </div>
         <button
@@ -131,7 +130,7 @@ export function GameScreen({
           </p>
         </div>
       )}
-      {alarm.active && (
+      {hasHp && alarm.active && (
         <div
           role="alert"
           className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-3"
@@ -147,7 +146,9 @@ export function GameScreen({
           </div>
         </div>
       )}
-      <div className="mb-4 grid grid-cols-4 gap-2">
+      <div
+        className={`mb-4 grid gap-2 ${hasHp ? "grid-cols-4" : "grid-cols-3"}`}
+      >
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-2.5">
           <Users className="mb-2 text-zinc-400" size={16} />
           <div className="text-xl font-black">{players.length}</div>
@@ -158,14 +159,16 @@ export function GameScreen({
           <div className="text-xl font-black">{aliveCount}</div>
           <div className="mt-1 text-[10px] text-zinc-500">زنده</div>
         </div>
-        <button
-          onClick={() => setListKind("coma")}
-          className="rounded-2xl border border-amber-400/10 bg-amber-400/[0.04] p-2.5 text-right active:bg-amber-400/10"
-        >
-          <BedDouble className="mb-2 text-amber-300" size={16} />
-          <div className="text-xl font-black">{comaCount}</div>
-          <div className="mt-1 text-[10px] text-zinc-500">کما</div>
-        </button>
+        {hasHp && (
+          <button
+            onClick={() => setListKind("coma")}
+            className="rounded-2xl border border-amber-400/10 bg-amber-400/[0.04] p-2.5 text-right active:bg-amber-400/10"
+          >
+            <BedDouble className="mb-2 text-amber-300" size={16} />
+            <div className="text-xl font-black">{comaCount}</div>
+            <div className="mt-1 text-[10px] text-zinc-500">کما</div>
+          </button>
+        )}
         <button
           onClick={() => setListKind("dead")}
           className="rounded-2xl border border-rose-400/10 bg-rose-400/[0.04] p-2.5 text-right active:bg-rose-400/10"
@@ -175,48 +178,52 @@ export function GameScreen({
           <div className="mt-1 text-[10px] text-zinc-500">مرده</div>
         </button>
       </div>
-      <section className="mb-4 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3">
-        <h2 className="text-xs font-bold">۳ نفری که کمترین HP را دارند</h2>
-        <p className="mb-2 mt-1 text-[10px] text-zinc-500">
-          بین بازیکنانی که نه مرده‌اند و نه در کما هستند
-        </p>
-        {lowest.length === 0 ? (
-          <p className="py-2 text-center text-xs text-zinc-600">
-            بازیکنی باقی نمانده است.
+      {hasHp && (
+        <section className="mb-4 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3">
+          <h2 className="text-xs font-bold">۳ نفری که کمترین HP را دارند</h2>
+          <p className="mb-2 mt-1 text-[10px] text-zinc-500">
+            بین بازیکنانی که نه مرده‌اند و نه در کما هستند
           </p>
-        ) : (
-          <div className="space-y-1.5">
-            {lowest.map((a, i) => (
-              <button
-                key={a.playerId}
-                onClick={() => openHp(a.playerId)}
-                className="flex w-full items-center justify-between rounded-xl bg-black/20 px-3 py-2.5 text-sm active:bg-white/[0.05]"
-              >
-                <span className="truncate">
-                  {i + 1}. {players.find((p) => p.id === a.playerId)?.name}{" "}
-                  <span className="text-[10px] text-zinc-500">
-                    · {roleMap[a.roleId].name}
-                  </span>
-                </span>
-                <span
-                  dir="ltr"
-                  className="font-black tabular-nums text-amber-300"
+          {lowest.length === 0 ? (
+            <p className="py-2 text-center text-xs text-zinc-600">
+              بازیکنی باقی نمانده است.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {lowest.map((a, i) => (
+                <button
+                  key={a.playerId}
+                  onClick={() => openHp(a.playerId)}
+                  className="flex w-full items-center justify-between rounded-xl bg-black/20 px-3 py-2.5 text-sm active:bg-white/[0.05]"
                 >
-                  {a.hp}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
+                  <span className="truncate">
+                    {i + 1}. {players.find((p) => p.id === a.playerId)?.name}{" "}
+                    <span className="text-[10px] text-zinc-500">
+                      · {roleMap[a.roleId].name}
+                    </span>
+                  </span>
+                  <span
+                    dir="ltr"
+                    className="font-black tabular-nums text-amber-300"
+                  >
+                    {a.hp}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-bold">بازیکنان</h2>
-        <button
-          onClick={() => setScreen("history")}
-          className="text-xs text-violet-300"
-        >
-          سوابق تغییرات <ArrowLeft className="mr-1 inline" size={13} />
-        </button>
+        {hasHp && (
+          <button
+            onClick={() => setScreen("history")}
+            className="text-xs text-violet-300"
+          >
+            سوابق تغییرات <ArrowLeft className="mr-1 inline" size={13} />
+          </button>
+        )}
       </div>
       <div className="space-y-2">
         {players.map((p) => {
@@ -227,17 +234,12 @@ export function GameScreen({
           return (
             <button
               key={p.id}
-              onClick={() => {
-                setHpPlayerId(p.id);
-                setCustomMode("damage");
-                setRoulettePartnerId("");
-              }}
+              onClick={() => openHp(p.id)}
               className={`w-full rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3 text-right active:bg-white/[0.05] ${a.status === "dead" ? "opacity-70" : ""}`}
             >
               <div className="flex items-center gap-3">
-                <img
-                  src={role.cardImage}
-                  alt=""
+                <RoleImage
+                  role={role}
                   className="h-14 w-10 rounded-lg bg-black/30 object-cover"
                 />
                 <div className="min-w-0 flex-1">
@@ -262,23 +264,27 @@ export function GameScreen({
                     </span>
                   </div>
                 </div>
-                <div className="text-left">
-                  <div
-                    dir="ltr"
-                    className={`text-xl font-black tabular-nums ${a.hp <= 0 ? "text-rose-300" : isLow ? "text-amber-300" : "text-emerald-300"}`}
-                  >
-                    {a.hp}
-                    <span className="mr-1 text-[10px] font-medium text-zinc-500">
-                      HP
-                    </span>
-                  </div>
-                  <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-white/10">
+                {hasHp && (
+                  <div className="text-left">
                     <div
-                      className={`h-full rounded-full ${a.hp <= 0 ? "bg-rose-400" : isLow ? "bg-amber-300" : "bg-emerald-400"}`}
-                      style={{ width: `${Math.max(0, Math.min(100, a.hp))}%` }}
-                    />
+                      dir="ltr"
+                      className={`text-xl font-black tabular-nums ${a.hp <= 0 ? "text-rose-300" : isLow ? "text-amber-300" : "text-emerald-300"}`}
+                    >
+                      {a.hp}
+                      <span className="mr-1 text-[10px] font-medium text-zinc-500">
+                        HP
+                      </span>
+                    </div>
+                    <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className={`h-full rounded-full ${a.hp <= 0 ? "bg-rose-400" : isLow ? "bg-amber-300" : "bg-emerald-400"}`}
+                        style={{
+                          width: `${Math.max(0, Math.min(100, a.hp))}%`,
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
                 <ChevronLeft size={16} className="text-zinc-600" />
               </div>
             </button>

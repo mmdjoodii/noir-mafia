@@ -1,7 +1,8 @@
 import type { Assignment, Game, HpEvent, Phase } from "./types";
 import { makeId } from "./id";
 
-const isDayPhase = (p: Phase) => p.kind === "day" || p.kind === "intro-day";
+export const isDayPhase = (p: Phase) =>
+  p.kind === "day" || p.kind === "intro-day";
 
 /**
  * وضعیت بعد از تغییر HP:
