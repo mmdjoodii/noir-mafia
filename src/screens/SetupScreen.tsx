@@ -1,7 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { ArrowLeft, Shield } from "lucide-react";
-import type { Scenario } from "../domain/types";
-import { toFa } from "../lib/format";
+import type { Scenario } from "../types";
+import { toFa } from "../utils/format";
 
 export function SetupScreen({
   scenario,

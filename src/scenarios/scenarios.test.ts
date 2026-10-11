@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rolesById, scenarios } from ".";
+import { getScenarioRoleMap, scenarios } from ".";
 
 describe("تعریف سناریوها", () => {
   it.each(scenarios.map((s) => [s.id, s] as const))(
@@ -8,10 +8,18 @@ describe("تعریف سناریوها", () => {
       expect(s.roles.reduce((n, r) => n + r.count, 0)).toBe(
         s.settings.playerCount,
       );
-      for (const r of s.roles) expect(rolesById[r.roleId]).toBeDefined();
+      for (const r of s.roles)
+        expect(getScenarioRoleMap(s.id)[r.roleId]).toBeDefined();
       expect(new Set(s.roles.map((r) => r.roleId)).size).toBe(s.roles.length);
     },
   );
+  it("کارت‌های نقش مشترک بین سناریوها از پوشه‌های مستقل می‌آیند", () => {
+    const damageCitizen = getScenarioRoleMap("damage")["simple-citizen"];
+    const bazporsCitizen = getScenarioRoleMap("bazpors-10")["simple-citizen"];
+    expect(damageCitizen.cardImage).toContain("/cards/damage/");
+    expect(bazporsCitizen.cardImage).toContain("/cards/bazpors/");
+    expect(damageCitizen.cardImage).not.toBe(bazporsCitizen.cardImage);
+  });
   it("شناسه سناریوها یکتاست", () => {
     expect(new Set(scenarios.map((s) => s.id)).size).toBe(scenarios.length);
   });

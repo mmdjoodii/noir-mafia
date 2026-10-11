@@ -1,7 +1,7 @@
 import { Activity, ArrowRight } from "lucide-react";
-import type { Screen } from "../lib/format";
-import type { HpEvent, Player } from "../domain/types";
-import { phaseLabel } from "../lib/format";
+import type { Screen } from "../utils/format";
+import type { HpEvent, Player } from "../types";
+import { phaseLabel } from "../utils/format";
 
 export function HistoryScreen({
   players,

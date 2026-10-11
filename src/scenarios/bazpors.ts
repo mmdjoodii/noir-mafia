@@ -1,6 +1,7 @@
-import type { Role, RoleSlot, Scenario } from "../domain/types";
+import type { Role, RoleSlot, Scenario } from "../types";
 
-const img = (name: string) => `${import.meta.env.BASE_URL}cards/${name}.webp`;
+const img = (name: string) =>
+  `${import.meta.env.BASE_URL}cards/bazpors/${name}.webp`;
 
 export const bazporsRoles: Role[] = [
   {
@@ -43,6 +44,12 @@ export const bazporsRoles: Role[] = [
     cardImage: img("invulnerable"),
   },
   { id: "sniper", name: "اسنایپر", side: "citizen", cardImage: img("sniper") },
+  {
+    id: "simple-citizen",
+    name: "شهروند ساده",
+    side: "citizen",
+    cardImage: img("simple-citizen"),
+  },
 ];
 
 const core: RoleSlot[] = [

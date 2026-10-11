@@ -1,5 +1,5 @@
 import { RoleImage } from "../components/RoleImage";
-import { nextPhase } from "../domain/hp";
+import { nextPhase } from "../game/phase";
 import type { Dispatch, SetStateAction } from "react";
 import {
   ArrowLeft,
@@ -14,10 +14,10 @@ import {
   Sun,
   Users,
 } from "lucide-react";
-import type { Screen } from "../lib/format";
-import type { Assignment, Game, Phase, Player } from "../domain/types";
-import { phaseLabel, statusLabel } from "../lib/format";
-import { rolesById as roleMap } from "../scenarios";
+import type { Screen } from "../utils/format";
+import type { Assignment, Game, Phase, Player } from "../types";
+import { phaseLabel, statusLabel } from "../utils/format";
+import { getScenarioRoleMap } from "../scenarios";
 
 export function GameScreen({
   game,
@@ -56,6 +56,7 @@ export function GameScreen({
   setScreen: (s: Screen) => void;
   hasHp: boolean;
 }) {
+  const roleMap = getScenarioRoleMap(game.scenarioId);
   return (
     <main className="px-4 pb-28">
       <div className="mb-5 mt-2 flex items-end justify-between">

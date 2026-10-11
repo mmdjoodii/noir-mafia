@@ -1,6 +1,6 @@
 import { Activity, Moon, Sun } from "lucide-react";
-import type { Game } from "../domain/types";
-import { phaseLabel } from "../lib/format";
+import type { Game } from "../types";
+import { phaseLabel } from "../utils/format";
 
 export function AppHeader({ game }: { game: Game | null }) {
   return (

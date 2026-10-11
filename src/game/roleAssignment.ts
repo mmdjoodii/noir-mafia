@@ -1,4 +1,4 @@
-import type { Assignment, Player, Scenario } from "./types";
+import type { Assignment, Player, Scenario } from "../types";
 export function buildRoleDeck(scenario: Scenario): string[] {
   return scenario.roles.flatMap(({ roleId, count }) =>
     Array.from({ length: count }, () => roleId),

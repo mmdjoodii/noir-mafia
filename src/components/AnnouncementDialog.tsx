@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Skull } from "lucide-react";
-import type { Assignment, Game, Player } from "../domain/types";
-import { markAnnounced } from "../domain/hp";
+import type { Assignment, Game, Player } from "../types";
+import { markAnnounced } from "../game/phase";
 
 export function AnnouncementDialog({
   game,

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Role } from "../domain/types";
+import type { Role } from "../types";
 
 /** تصویر کارت نقش؛ اگر فایل تصویر هنوز اضافه نشده باشد، یک جای‌گزین با نام نقش نشان می‌دهد. */
 export function RoleImage({

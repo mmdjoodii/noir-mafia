@@ -1,9 +1,9 @@
 import { RoleImage } from "./RoleImage";
 import { Minus, Plus, RotateCcw, X } from "lucide-react";
-import type { Assignment, Game, Player } from "../domain/types";
-import { phaseLabel } from "../lib/format";
-import { hpCauses } from "../lib/hpCauses";
-import { rolesById as roleMap } from "../scenarios";
+import type { Assignment, Game, Player } from "../types";
+import { phaseLabel } from "../utils/format";
+import { hpCauses } from "../scenarios/damage/hpCauses";
+import { getScenarioRoleMap } from "../scenarios";
 
 export function HpSheet({
   game,
@@ -48,6 +48,7 @@ export function HpSheet({
   setCustomMode: (m: "damage" | "heal") => void;
   changeHp: (delta: number, reason?: string) => void;
 }) {
+  const roleMap = getScenarioRoleMap(game.scenarioId);
   return (
     <div
       className="fixed inset-0 z-40 flex items-end justify-center bg-black/70 backdrop-blur-sm"
@@ -214,6 +215,8 @@ export function HpSheet({
             <div className="flex gap-2">
               <input
                 type="number"
+                inputMode="numeric"
+                step="1"
                 min="1"
                 value={customAmount}
                 onChange={(e) => setCustomAmount(e.target.value)}
@@ -221,7 +224,10 @@ export function HpSheet({
                 className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-sm outline-none focus:border-violet-400/50"
               />
               <button
-                disabled={!customAmount || Number(customAmount) <= 0}
+                disabled={
+                  !Number.isInteger(Number(customAmount)) ||
+                  Number(customAmount) <= 0
+                }
                 onClick={() =>
                   changeHp(
                     (customMode === "damage" ? -1 : 1) * Number(customAmount),
