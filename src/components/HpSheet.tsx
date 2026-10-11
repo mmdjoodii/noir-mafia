@@ -1,3 +1,4 @@
+import { RoleImage } from "./RoleImage";
 import { Minus, Plus, RotateCcw, X } from "lucide-react";
 import type { Assignment, Game, Player } from "../domain/types";
 import { phaseLabel } from "../lib/format";
@@ -58,9 +59,8 @@ export function HpSheet({
       >
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/15" />
         <div className="mb-5 flex items-center gap-3">
-          <img
-            src={roleMap[selectedAssignment.roleId].cardImage}
-            alt=""
+          <RoleImage
+            role={roleMap[selectedAssignment.roleId]}
             className="h-16 w-12 rounded-xl object-cover"
           />
           <div className="min-w-0 flex-1">

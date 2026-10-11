@@ -17,7 +17,7 @@ export const statusLabel = (a: Assignment) =>
 
 export type Screen = "setup" | "deal" | "reveal" | "game" | "history";
 
-export const initialNames = Array.from(
-  { length: 10 },
-  (_, i) => `بازیکن ${i + 1}`,
-);
+export const defaultNames = (n: number) =>
+  Array.from({ length: n }, (_, i) => `بازیکن ${i + 1}`);
+
+export const toFa = (n: number) => n.toLocaleString("fa-IR");

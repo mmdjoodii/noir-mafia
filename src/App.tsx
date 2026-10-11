@@ -8,6 +8,7 @@ import {
   undoLastHpChange,
 } from "./domain/hp";
 import { makeId } from "./domain/id";
+import { setPlayerStatus } from "./domain/status";
 import {
   buildRoleDeck,
   canAssignRole,
@@ -15,8 +16,8 @@ import {
 } from "./domain/roleAssignment";
 import { loadGame, saveGame } from "./state/storage";
 import { damageScenario } from "./scenarios/damage";
-import { getScenario } from "./scenarios";
-import { initialNames, type Screen } from "./lib/format";
+import { getScenario, scenarios } from "./scenarios";
+import { defaultNames, type Screen } from "./lib/format";
 import { shuffled } from "./lib/random";
 import { AppHeader } from "./components/AppHeader";
 import { DesktopNotice } from "./components/DesktopNotice";
@@ -24,6 +25,7 @@ import { HpSheet } from "./components/HpSheet";
 import { PlayerListSheet } from "./components/PlayerListSheet";
 import { AnnouncementDialog } from "./components/AnnouncementDialog";
 import { ResetDialog } from "./components/ResetDialog";
+import { PlayerStatusSheet } from "./components/PlayerStatusSheet";
 import { SetupScreen } from "./screens/SetupScreen";
 import { DealScreen } from "./screens/DealScreen";
 import { RevealScreen } from "./screens/RevealScreen";
@@ -44,7 +46,9 @@ export default function App() {
         : "setup";
   });
   const [names, setNames] = useState<string[]>(
-    () => saved?.players.map((p) => p.name) ?? initialNames,
+    () =>
+      saved?.players.map((p) => p.name) ??
+      defaultNames(damageScenario.settings.playerCount),
   );
   const [selectedPlayerId, setSelectedPlayerId] = useState(
     () => saved?.selectedPlayerId ?? "",
@@ -63,6 +67,8 @@ export default function App() {
   const [selectedCauseId, setSelectedCauseId] = useState("");
   const [roulettePartnerId, setRoulettePartnerId] = useState("");
   const [customMode, setCustomMode] = useState<"damage" | "heal">("damage");
+  const [setupScenarioId, setSetupScenarioId] = useState(damageScenario.id);
+  const [statusPlayerId, setStatusPlayerId] = useState("");
   const [listKind, setListKind] = useState<"dead" | "coma" | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [toast, setToast] = useState("");
@@ -83,7 +89,8 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const scenario = getScenario(game?.scenarioId ?? "") ?? damageScenario;
+  const scenario =
+    getScenario(game?.scenarioId ?? setupScenarioId) ?? damageScenario;
   const players = game?.players ?? [];
   const assignments = useMemo(() => game?.assignments ?? [], [game]);
   const assignedCount = assignments.length;
@@ -104,10 +111,26 @@ export default function App() {
   const lowest = game ? lowestHpPlayers(game) : [];
   const listPlayers = assignments.filter((a) => a.status === listKind);
   const openHp = (id: string) => {
+    if (!scenario.settings.hp) return setStatusPlayerId(id);
     setHpPlayerId(id);
     setCustomMode("damage");
     setRoulettePartnerId("");
   };
+  const selectScenario = (id: string) => {
+    const next = getScenario(id);
+    if (!next) return;
+    setSetupScenarioId(id);
+    setNames((old) =>
+      Array.from(
+        { length: next.settings.playerCount },
+        (_, i) => old[i] ?? `بازیکن ${i + 1}`,
+      ),
+    );
+  };
+  const statusPlayer = players.find((p) => p.id === statusPlayerId);
+  const statusAssignment = assignments.find(
+    (a) => a.playerId === statusPlayerId,
+  );
   const deadCount = assignments.filter((a) => a.status === "dead").length;
 
   function startGame() {
@@ -115,7 +138,7 @@ export default function App() {
     const p: Player[] = cleaned.map((name) => ({ id: makeId(), name }));
     const next: Game = {
       id: makeId(),
-      scenarioId: damageScenario.id,
+      scenarioId: scenario.id,
       players: p,
       assignments: [],
       phase: { kind: "intro-day", number: 0 },
@@ -339,7 +362,7 @@ export default function App() {
     if (screen === "deal") restartDealing();
     else {
       setGame(null);
-      setNames(initialNames);
+      setNames(defaultNames(scenario.settings.playerCount));
       setScreen("setup");
       setHpPlayerId("");
       setConfirmReset(false);
@@ -353,6 +376,9 @@ export default function App() {
 
         {screen === "setup" && (
           <SetupScreen
+            scenario={scenario}
+            scenarios={scenarios}
+            selectScenario={selectScenario}
             names={names}
             setNames={setNames}
             startGame={startGame}
@@ -389,6 +415,7 @@ export default function App() {
 
         {screen === "game" && game && (
           <GameScreen
+            hasHp={scenario.settings.hp}
             game={game}
             players={players}
             assignments={assignments}
@@ -405,9 +432,6 @@ export default function App() {
             deadCount={deadCount}
             setListKind={setListKind}
             setScreen={setScreen}
-            setHpPlayerId={setHpPlayerId}
-            setRoulettePartnerId={setRoulettePartnerId}
-            setCustomMode={setCustomMode}
           />
         )}
 
@@ -450,6 +474,7 @@ export default function App() {
 
         {listKind && screen === "game" && (
           <PlayerListSheet
+            hasHp={scenario.settings.hp}
             players={players}
             openHp={openHp}
             setListKind={setListKind}
@@ -465,6 +490,22 @@ export default function App() {
             pending={pending}
           />
         )}
+        {game &&
+          !scenario.settings.hp &&
+          statusPlayer &&
+          statusAssignment &&
+          screen === "game" && (
+            <PlayerStatusSheet
+              player={statusPlayer}
+              assignment={statusAssignment}
+              onSetStatus={(status) =>
+                setGame((g) =>
+                  g ? setPlayerStatus(g, statusPlayer.id, status) : g,
+                )
+              }
+              onClose={() => setStatusPlayerId("")}
+            />
+          )}
         {confirmReset && (
           <ResetDialog
             onCancel={() => setConfirmReset(false)}

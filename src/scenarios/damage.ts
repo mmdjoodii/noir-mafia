@@ -36,6 +36,7 @@ export const damageRoles: Role[] = [
 
 export const damageScenario: Scenario = {
   id: "damage",
+  family: { id: "damage", name: "دمیج" },
   name: "دمیج",
   roles: [
     { roleId: "simple-citizen", count: 2 },
@@ -48,5 +49,5 @@ export const damageScenario: Scenario = {
     { roleId: "wizard", count: 1 },
     { roleId: "roulette-man", count: 1 },
   ],
-  settings: { initialHp: 100, playerCount: 10 },
+  settings: { initialHp: 100, playerCount: 10, hp: true },
 };

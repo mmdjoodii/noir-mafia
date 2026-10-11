@@ -1,3 +1,4 @@
+import { RoleImage } from "../components/RoleImage";
 import { Check, Shield } from "lucide-react";
 import type { Player } from "../domain/types";
 import { rolesById as roleMap } from "../scenarios";
@@ -44,11 +45,10 @@ export function RevealScreen({
           className="relative aspect-[2/3] w-full overflow-hidden rounded-[26px] border border-violet-300/20 bg-gradient-to-br from-[#211b38] via-[#14131e] to-[#0f1018] shadow-2xl shadow-violet-950/30 select-none"
         >
           {showCard ? (
-            <img
-              src={roleMap[revealedRoleId]?.cardImage}
-              alt="کارت نقش بازیکن"
+            <RoleImage
+              role={roleMap[revealedRoleId]!}
               className="card-image h-full w-full"
-              draggable={false}
+              big
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center p-7">
